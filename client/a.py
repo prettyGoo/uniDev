@@ -9,7 +9,7 @@ from PyQt5.QtWidgets import QApplication
 
 from PyQt5.QtWidgets import QWidget
 from PyQt5.QtWidgets import QMainWindow
-from PyQt5.QtWidgets import QStackedWidget, QStackedLayout
+from PyQt5.QtWidgets import QStackedWidget
 
 from PyQt5.QtGui import QStaticText, QPainter, QFont
 
@@ -17,7 +17,7 @@ from PyQt5.QtWidgets import QVBoxLayout
 from PyQt5.QtWidgets import QPushButton
 
 from PyQt5.QtCore import Qt
-from PyQt5.QtCore import pyqtSignal, QObject
+from PyQt5.QtCore import pyqtSignal
 
 from .events import *
 
@@ -27,50 +27,44 @@ class MyApplication(QMainWindow):
     def __init__(self, parent=None):
         super().__init__()
 
-        self.initSignals()
+        self.widgets = {}
         self.initWidgets()
         self.initUI()
-
-    def initSignals(self):
-        self.sig = WidgetCommunication().switchWidget
 
     def initWidgets(self):
         # self.widgets.update({'greeting': GreeingWidget()})
         # self.widgets.update({'main': MainWidget()})
-        self.greetingWidget = GreeingWidget(signal=self.sig)
-        self.mainWidget = MainWidget(signal=self.sig)
+        self.greetingWidget = GreeingWidget()
+        self.mainWidget = MainWidget()
 
         self.centralWidget = QStackedWidget()
         self.setCentralWidget(self.centralWidget)
-
+        # self.centralWidget.addWidget(self.widgets.get('greeting'))
+        # self.centralWidget.addWidget(self.widgets.get('main'))
         self.centralWidget.addWidget(self.greetingWidget)
         self.centralWidget.addWidget(self.mainWidget)
 
-        self.centralWidget.setCurrentWidget(self.mainWidget)
+        self.centralWidget.setCurrentWidget(self.greetingWidget)
 
-
+        # self.greetingWidget.clicked.connect(lambda: self.centralWidget.setCurrentWidget(self.mainWidget))
+        # self.mainWidget.clicked.connect(lambda: self.centralWidget.setCurrentWidget(self.greetingWidget))
 
 
     def initUI(self):
         self.setGeometry(400, 50, 700, 600)
         self.setWindowTitle('MathSelf')
         # self.setWindowIcon()
-        self.sig = WidgetCommunication().switchWidget
-        self.sig.connect(self.a)
         self.show()
-
-    def a(self):
-        print('A')
 
 
 class GreeingWidget(QWidget):
 
-    def __init__(self,signal):
+    def __init__(self):
         super().__init__()
         # super(Start, self).__init__(parent)
 
         self.name = 'greeting'
-        self.sig = signal
+        clicked = pyqtSignal()
         self.initUI()
 
 
@@ -81,11 +75,8 @@ class GreeingWidget(QWidget):
 
         continueButton = QPushButton('Continue')
         continueButton.resize(150, 200)
-        continueButton.clicked.connect(self.a)
+        # continueButton.clicked.connect()
         grid.addWidget(continueButton)
-
-    def a(self):
-        print('!!!!!!')
 
 
     # def paintEvent(self, event):
@@ -98,21 +89,16 @@ class GreeingWidget(QWidget):
 
 class MainWidget(QWidget):
 
-    def __init__(self, signal):
+    def __init__(self):
         super().__init__()
 
-        self.initUI(signal)
+        self.initUI()
 
-    def initUI(self, signal):
-
+    def initUI(self):
+        # clicked = pyqtSignal()
 
         btn = QPushButton("Turn Back")
-        btn.clicked.connect(signal.emit)
+        # btn.clicked.connect(self.clicked.emit)
         grid = QVBoxLayout()
         self.setLayout(grid)
         grid.addWidget(btn)
-
-
-class WidgetCommunication(QObject):
-
-    switchWidget = pyqtSignal()
