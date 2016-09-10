@@ -7,19 +7,19 @@ import socket
 
 from PyQt5.QtWidgets import QApplication
 
-from PyQt5.QtWidgets import QWidget
+from PyQt5.QtWidgets import QWidget, QLabel
 from PyQt5.QtWidgets import QMainWindow
 from PyQt5.QtWidgets import QStackedWidget, QStackedLayout
+from PyQt5.QtWidgets import QInputDialog, QComboBox
 
 from PyQt5.QtGui import QStaticText, QPainter, QFont
 
 from PyQt5.QtWidgets import QVBoxLayout
-from PyQt5.QtWidgets import QPushButton
+from PyQt5.QtWidgets import QPushButton, QGridLayout, QLineEdit
 
 from PyQt5.QtCore import Qt
 from PyQt5.QtCore import pyqtSignal, QObject
 
-from .events import *
 
 
 class MyApplication(QMainWindow):
@@ -27,92 +27,85 @@ class MyApplication(QMainWindow):
     def __init__(self, parent=None):
         super().__init__()
 
-        self.initSignals()
         self.initWidgets()
         self.initUI()
 
-    def initSignals(self):
-        self.sig = WidgetCommunication().switchWidget
-
     def initWidgets(self):
-        # self.widgets.update({'greeting': GreeingWidget()})
-        # self.widgets.update({'main': MainWidget()})
-        self.greetingWidget = GreeingWidget(signal=self.sig)
-        self.mainWidget = MainWidget(signal=self.sig)
 
-        self.centralWidget = QStackedWidget()
+        self.lay = QStackedLayout()
+        self.greetingWidget()
+        self.mainWidget()
+
+        self.centralWidget = QWidget()
+
+        self.lay.addWidget(self.gw)
+        self.lay.addWidget(self.main_widget)
+
+        self.l = QVBoxLayout()
+        self.l.addLayout(self.lay)
+        self.centralWidget.setLayout(self.l)
         self.setCentralWidget(self.centralWidget)
-
-        self.centralWidget.addWidget(self.greetingWidget)
-        self.centralWidget.addWidget(self.mainWidget)
-
-        self.centralWidget.setCurrentWidget(self.mainWidget)
-
-
 
 
     def initUI(self):
         self.setGeometry(400, 50, 700, 600)
         self.setWindowTitle('MathSelf')
         # self.setWindowIcon()
-        self.sig = WidgetCommunication().switchWidget
-        self.sig.connect(self.a)
         self.show()
 
-    def a(self):
-        print('A')
+    def greetingWidget(self):
+
+        self.gw = QWidget()
+        btn1 = QPushButton("Greeting Widget")
+        btn1.clicked.connect(self.change)
+        self.dialog = QInputDialog()
+
+        grid1 = QVBoxLayout()
+        grid1.addWidget(btn1)
+        grid1.addWidget(self.dialog)
+        self.gw.setLayout(grid1)
+
+    def mainWidget(self):
+
+        self.main_widget = QWidget()
+
+        self.equation_lbl = QLabel('Equation type', self)
+        equations = ['A*x1 + B*x2 = y', 'A*x1^2 + B*x2^2', 'A*x1^2 + B*x2']
+        self.equation = QComboBox(self)
+        for eq in equations:
+            self.equation.addItem(eq)
+
+        self.coef_lbl = QLabel('Coefficients')
+        self.coeffs = QLineEdit()
+        self.coeffs.setPlaceholderText('Example: A=1;B=-1')
 
 
-class GreeingWidget(QWidget):
+        self.answerBtn = QPushButton('Get Answer')
+        self.answerBtn.clicked.connect(self.answer)
+        self.answerBtn.setMaximumWidth(400)
 
-    def __init__(self,signal):
-        super().__init__()
-        # super(Start, self).__init__(parent)
+        btn2 = QPushButton('Go tto greeting')
+        style = "color: #ddd; border: 1px solid #ddd; padding: 10px; border-radius: 5px; font-size: 20px; outline: none"
+        btn2.setStyleSheet()
 
-        self.name = 'greeting'
-        self.sig = signal
-        self.initUI()
+        btn2.clicked.connect(self.change)
 
+        grid2 = QGridLayout()
+        grid2.addWidget(self.equation_lbl, 1, 1)
+        grid2.addWidget(self.equation, 1, 2)
+        grid2.addWidget(self.coef_lbl, 2, 1)
+        grid2.addWidget(self.coeffs, 2, 2)
+        grid2.addWidget(self.answerBtn, 3, 3)
+        grid2.addWidget(btn2)
+        self.main_widget.setLayout(grid2)
 
-    def initUI(self):
+    def change(self):
 
-        grid = QVBoxLayout()
-        self.setLayout(grid)
+        if self.lay.currentIndex() == 0:
+            print('1')
+            self.lay.setCurrentWidget(self.main_widget)
+        elif self.lay.currentIndex() == 1:
+            self.lay.setCurrentWidget(self.gw)
 
-        continueButton = QPushButton('Continue')
-        continueButton.resize(150, 200)
-        continueButton.clicked.connect(self.a)
-        grid.addWidget(continueButton)
-
-    def a(self):
-        print('!!!!!!')
-
-
-    # def paintEvent(self, event):
-    #     qp = QPainter()
-    #     qp.begin(self)
-    #     qp.setFont(QFont('Decorative', 28))
-    #     qp.drawText(event.rect(), Qt.AlignCenter, 'Welcome!\104gffg')
-    #     qp.end()
-
-
-class MainWidget(QWidget):
-
-    def __init__(self, signal):
-        super().__init__()
-
-        self.initUI(signal)
-
-    def initUI(self, signal):
-
-
-        btn = QPushButton("Turn Back")
-        btn.clicked.connect(signal.emit)
-        grid = QVBoxLayout()
-        self.setLayout(grid)
-        grid.addWidget(btn)
-
-
-class WidgetCommunication(QObject):
-
-    switchWidget = pyqtSignal()
+    def answer(self):
+        print(self.coeffs.text())
