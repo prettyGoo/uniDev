@@ -1,10 +1,7 @@
-# http://stackoverflow.com/questions/35612901/changing-between-widgets-in-qmainwindows-central-widgetient.
-# http://www.tutorialspoint.com/pyqt/pyqt_qstackedwidget.htm
-
-
 import sys
 import re
 import socket
+import json
 
 from PyQt5.QtWidgets import QApplication
 
@@ -21,19 +18,27 @@ from PyQt5.QtWidgets import QPushButton, QGridLayout, QLineEdit
 from PyQt5.QtCore import Qt
 from PyQt5.QtCore import pyqtSignal, QObject
 
-
+from signal import signal, SIGPIPE, SIG_DFL
 
 class MyApplication(QMainWindow):
 
     def __init__(self, parent=None):
         super().__init__()
-
+        signal(SIGPIPE,SIG_DFL)
+        self.initSocketConnection()
         self.initWidgets()
         self.initUI()
+        self.initStyle()
+
+
+    def initSocketConnection(self):
+        self.clientSocket = socket.socket()
+        self.clientSocket.connect(('localhost', 9093))
         self.serverpack = {
             "equation": 0,
             "coeffs": []
         }
+
 
     def initWidgets(self):
 
@@ -63,11 +68,9 @@ class MyApplication(QMainWindow):
         self.gw = QWidget()
         btn1 = QPushButton("Greeting Widget")
         btn1.clicked.connect(self.change)
-        self.dialog = QInputDialog()
 
         grid1 = QVBoxLayout()
         grid1.addWidget(btn1)
-        grid1.addWidget(self.dialog)
         self.gw.setLayout(grid1)
 
     def mainWidget(self):
@@ -90,8 +93,9 @@ class MyApplication(QMainWindow):
         self.answerBtn.setMaximumWidth(400)
 
         btn2 = QPushButton('Go tto greeting')
-        style = "color: #4d4d4f; border: 1px solid #4d4d4f; padding: 10px; border-radius: 5px; font-size: 20px; outline: none;s"
+        style = "color: #4d4d4f; border: 1px solid #4d4d4f; padding: 10px; border-radius: 5px; font-size: 20px; outline: none; background: none;"
         btn2.setStyleSheet(style)
+        btn2.setCursor(Qt.OpenHandCursor)
 
         btn2.clicked.connect(self.change)
 
@@ -105,6 +109,10 @@ class MyApplication(QMainWindow):
         self.main_widget.setLayout(grid2)
 
 
+    def initStyle(self):
+        # self.main_widget.setStyleSheet("background-image: url(./static/img/background.jpg)")
+        a = 1
+
     def change(self):
 
         if self.lay.currentIndex() == 0:
@@ -117,15 +125,33 @@ class MyApplication(QMainWindow):
         self.serverpack["equation"] = self.equation.currentIndex()
         self.serverpack["coeffs"] = self.parsed_coeffs
 
+        data = json.dumps(self.serverpack)
+        self.clientSocket.send(data.encode())
+        print('DATA HAS BEEN SENT TO THE SERVER')
+        self.receiveData()
+
+    def receiveData(self):
+        serialized_result  = self.clientSocket.recv(4048)
+
+        #
+        # while not serialized_result:
+        #     serialized_result  = self.clientSocket.recv(16384)
+        # self.clientSocket.close()
+
+        result = json.loads(serialized_result.decode())
+        print("Result")
+
     def parse(self):
         self.parsed_coeffs = []
 
         curent_eq = self.equation.currentIndex()
         if curent_eq == 0:
             reg_ex = r'A=\d+;\s*B=\d+;'
+            self.serverpack["equation"] = 0
             print('reg 1')
         elif curent_eq == 1:
             reg_ex = r'A=\d+;\s*B=\d+;\s*C=\d+;\s*'
+            self.serverpack["equation"] = 1
             print('reg 2')
         else:
             print('SOME PARSE ERROR')
@@ -134,7 +160,5 @@ class MyApplication(QMainWindow):
         if success_reg:
             for coef in re.findall(r'\d+', self.coeffs.text()):
                 self.parsed_coeffs.append(int(coef))
-            print('matched')
-            print(self.parsed_coeffs)
         else:
-            print('not matched')
+            print('NOT MATCHED')
