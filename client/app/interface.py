@@ -25,7 +25,7 @@ class MyApplication(QMainWindow):
     def __init__(self, parent=None):
         super().__init__()
         signal(SIGPIPE,SIG_DFL)
-        self.initSocketConnection()
+        # self.initSocketConnection()
         self.initWidgets()
         self.initUI()
         self.initStyle()
@@ -33,7 +33,7 @@ class MyApplication(QMainWindow):
 
     def initSocketConnection(self):
         self.clientSocket = socket.socket()
-        self.clientSocket.connect(('localhost', 9093))
+        self.clientSocket.connect(('localhost', 9095))
         self.serverpack = {
             "equation": 0,
             "coeffs": []
@@ -121,6 +121,7 @@ class MyApplication(QMainWindow):
             self.lay.setCurrentWidget(self.gw)
 
     def sendToServer(self):
+        self.initSocketConnection()
         self.parse()
         self.serverpack["equation"] = self.equation.currentIndex()
         self.serverpack["coeffs"] = self.parsed_coeffs
@@ -133,13 +134,11 @@ class MyApplication(QMainWindow):
     def receiveData(self):
         serialized_result  = self.clientSocket.recv(4048)
 
-        #
-        # while not serialized_result:
-        #     serialized_result  = self.clientSocket.recv(16384)
-        # self.clientSocket.close()
+        while not serialized_result:
+            serialized_result  = self.clientSocket.recv(16384)
 
         result = json.loads(serialized_result.decode())
-        print("Result")
+        print("Result: {0}".format(result))
 
     def parse(self):
         self.parsed_coeffs = []

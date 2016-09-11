@@ -9,7 +9,7 @@ tcpSocket = socket.socket()
 tcpSocket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
 
 try:
-    tcpSocket.bind(('localhost', 9093))
+    tcpSocket.bind(('localhost', 9095))
     print('Server has started')
 except Exception as e:
     raise
@@ -20,6 +20,8 @@ while True:
     connection, address = tcpSocket.accept()
 
     serialized_data = connection.recv(4048)
+    print(serialized_data)
+
     data = json.loads(serialized_data.decode())
 
     coeffs = data["coeffs"]
@@ -30,7 +32,4 @@ while True:
     a = json.dumps(result)
     print(a)
     connection.send(a.encode())
-
     connection.close()
-
-tcpSocket.close()
