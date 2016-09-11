@@ -3,6 +3,7 @@
 
 
 import sys
+import re
 import socket
 
 from PyQt5.QtWidgets import QApplication
@@ -29,6 +30,10 @@ class MyApplication(QMainWindow):
 
         self.initWidgets()
         self.initUI()
+        self.serverpack = {
+            "equation": 0,
+            "coeffs": []
+        }
 
     def initWidgets(self):
 
@@ -81,12 +86,12 @@ class MyApplication(QMainWindow):
 
 
         self.answerBtn = QPushButton('Get Answer')
-        self.answerBtn.clicked.connect(self.answer)
+        self.answerBtn.clicked.connect(self.sendToServer)
         self.answerBtn.setMaximumWidth(400)
 
         btn2 = QPushButton('Go tto greeting')
-        style = "color: #ddd; border: 1px solid #ddd; padding: 10px; border-radius: 5px; font-size: 20px; outline: none"
-        btn2.setStyleSheet()
+        style = "color: #4d4d4f; border: 1px solid #4d4d4f; padding: 10px; border-radius: 5px; font-size: 20px; outline: none;s"
+        btn2.setStyleSheet(style)
 
         btn2.clicked.connect(self.change)
 
@@ -99,13 +104,37 @@ class MyApplication(QMainWindow):
         grid2.addWidget(btn2)
         self.main_widget.setLayout(grid2)
 
+
     def change(self):
 
         if self.lay.currentIndex() == 0:
-            print('1')
             self.lay.setCurrentWidget(self.main_widget)
         elif self.lay.currentIndex() == 1:
             self.lay.setCurrentWidget(self.gw)
 
-    def answer(self):
-        print(self.coeffs.text())
+    def sendToServer(self):
+        self.parse()
+        self.serverpack["equation"] = self.equation.currentIndex()
+        self.serverpack["coeffs"] = self.parsed_coeffs
+
+    def parse(self):
+        self.parsed_coeffs = []
+
+        curent_eq = self.equation.currentIndex()
+        if curent_eq == 0:
+            reg_ex = r'A=\d+;\s*B=\d+;'
+            print('reg 1')
+        elif curent_eq == 1:
+            reg_ex = r'A=\d+;\s*B=\d+;\s*C=\d+;\s*'
+            print('reg 2')
+        else:
+            print('SOME PARSE ERROR')
+
+        success_reg = re.findall(reg_ex, self.coeffs.text())
+        if success_reg:
+            for coef in re.findall(r'\d+', self.coeffs.text()):
+                self.parsed_coeffs.append(int(coef))
+            print('matched')
+            print(self.parsed_coeffs)
+        else:
+            print('not matched')
