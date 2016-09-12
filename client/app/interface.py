@@ -29,6 +29,10 @@ class MyApplication(QMainWindow):
         self.initWidgets()
         self.initUI()
         self.initStyle()
+        self.serverpack = {
+            "equation": 0,
+            "coeffs": []
+        }
 
 
     def initSocketConnection(self):
@@ -99,13 +103,17 @@ class MyApplication(QMainWindow):
 
         btn2.clicked.connect(self.change)
 
+        self.resultLabel = QLabel(self)
+        self.resultLabel.setText("Here Will Be Your Answer")
+
         grid2 = QGridLayout()
-        grid2.addWidget(self.equation_lbl, 1, 1)
-        grid2.addWidget(self.equation, 1, 2)
+        grid2.addWidget(self.equation_lbl, 0, 0)
+        grid2.addWidget(self.equation, 0, 1)
         grid2.addWidget(self.coef_lbl, 2, 1)
         grid2.addWidget(self.coeffs, 2, 2)
         grid2.addWidget(self.answerBtn, 3, 3)
-        grid2.addWidget(btn2)
+        grid2.addWidget(self.resultLabel, 3, 2)
+        grid2.addWidget(btn2, 0, 4)
         self.main_widget.setLayout(grid2)
 
 
@@ -120,9 +128,19 @@ class MyApplication(QMainWindow):
         elif self.lay.currentIndex() == 1:
             self.lay.setCurrentWidget(self.gw)
 
+            self.resultLabel.setText("Here Will Be Your Answer")
+            self.equation.setCurrentIndex(0)
+            self.coeffs.setText("")
+
     def sendToServer(self):
-        self.initSocketConnection()
-        self.parse()
+
+        success = self.parse()
+        if not success:
+            self.setErrorLabel()
+            return
+        else:
+            self.initSocketConnection()
+
         self.serverpack["equation"] = self.equation.currentIndex()
         self.serverpack["coeffs"] = self.parsed_coeffs
 
@@ -130,15 +148,14 @@ class MyApplication(QMainWindow):
         self.clientSocket.send(data.encode())
         print('DATA HAS BEEN SENT TO THE SERVER')
         self.receiveData()
+        print('DATA HAS BEEN RECEIVED FROM THE SERVER')
 
     def receiveData(self):
         serialized_result  = self.clientSocket.recv(4048)
-
-        while not serialized_result:
-            serialized_result  = self.clientSocket.recv(16384)
+        self.clientSocket.close()
 
         result = json.loads(serialized_result.decode())
-        print("Result: {0}".format(result))
+        self.setResultLabel(result)
 
     def parse(self):
         self.parsed_coeffs = []
@@ -159,5 +176,12 @@ class MyApplication(QMainWindow):
         if success_reg:
             for coef in re.findall(r'\d+', self.coeffs.text()):
                 self.parsed_coeffs.append(int(coef))
+            return True
         else:
-            print('NOT MATCHED')
+            return False
+
+    def setErrorLabel(self):
+        self.resultLabel.setText("Wrong coefficients input")
+
+    def setResultLabel(self, result):
+        self.resultLabel.setText("%s" % result )
