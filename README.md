@@ -1,2 +1,0 @@
-# uniDev
-University semestra project
