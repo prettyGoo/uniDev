@@ -4,78 +4,64 @@ import socket
 import json
 
 from PyQt5.QtWidgets import QApplication
-
-from PyQt5.QtWidgets import QWidget, QLabel
 from PyQt5.QtWidgets import QMainWindow
-from PyQt5.QtWidgets import QStackedWidget, QStackedLayout
-from PyQt5.QtWidgets import QInputDialog, QComboBox
 
-from PyQt5.QtGui import QStaticText, QPainter, QFont
+from PyQt5.QtWidgets import QWidget
+from PyQt5.QtWidgets import QLabel, QComboBox, QLineEdit
+from PyQt5.QtWidgets import QPushButton
+from PyQt5.QtWidgets import QStackedLayout, QGridLayout, QVBoxLayout
 
-from PyQt5.QtWidgets import QVBoxLayout
-from PyQt5.QtWidgets import QPushButton, QGridLayout, QLineEdit
+from PyQt5.QtCore import Qt, QObject, pyqtSignal
+from PyQt5.QtGui import QIcon
 
-from PyQt5.QtCore import Qt
-from PyQt5.QtCore import pyqtSignal, QObject
-
-from signal import signal, SIGPIPE, SIG_DFL
 
 class MyApplication(QMainWindow):
 
     def __init__(self, parent=None):
         super().__init__()
-        signal(SIGPIPE,SIG_DFL)
-        # self.initSocketConnection()
+
+        self.serverpack = {
+            "equation": 0,
+            "coeffs": []
+        }
+
         self.initWidgets()
         self.initUI()
-        self.initStyle()
-        self.serverpack = {
-            "equation": 0,
-            "coeffs": []
-        }
-
-
-    def initSocketConnection(self):
-        self.clientSocket = socket.socket()
-        self.clientSocket.connect(('localhost', 9095))
-        self.serverpack = {
-            "equation": 0,
-            "coeffs": []
-        }
-
 
     def initWidgets(self):
 
-        self.lay = QStackedLayout()
         self.greetingWidget()
         self.mainWidget()
 
         self.centralWidget = QWidget()
-
-        self.lay.addWidget(self.gw)
-        self.lay.addWidget(self.main_widget)
-
-        self.l = QVBoxLayout()
-        self.l.addLayout(self.lay)
-        self.centralWidget.setLayout(self.l)
         self.setCentralWidget(self.centralWidget)
 
+        self.lay = QStackedLayout()
+        self.lay.addWidget(self.greeting_widget)
+        self.lay.addWidget(self.main_widget)
 
-    def initUI(self):
-        self.setGeometry(400, 50, 700, 600)
-        self.setWindowTitle('MathSelf')
-        # self.setWindowIcon()
-        self.show()
+        self.core_lay = QVBoxLayout()
+        self.core_lay.addLayout(self.lay)
+        self.centralWidget.setLayout(self.core_lay)
 
     def greetingWidget(self):
 
-        self.gw = QWidget()
-        btn1 = QPushButton("Greeting Widget")
-        btn1.clicked.connect(self.change)
+        self.greeting_widget = QWidget()
 
-        grid1 = QVBoxLayout()
-        grid1.addWidget(btn1)
-        self.gw.setLayout(grid1)
+        btn = QPushButton("Continue")
+        btn.setStyleSheet("color: #4d4d4f; border: 1px solid #4d4d4f; padding: 10px; border-radius: 5px; font-size: 20px; outline: none; background: none;")
+        btn.setCursor(Qt.OpenHandCursor)
+        btn.clicked.connect(self.change)
+
+        lbl = QLabel("This is equation solver.\nChoose equation, input coefficients, get answer\nand have fun!", self)
+        lbl.setAlignment(Qt.AlignHCenter)
+        lbl.setStyleSheet("font-size: 20px; margin-top: 30px; margin-bottom: 50px;")
+
+        grid = QVBoxLayout()
+        grid.setAlignment(Qt.AlignTop)
+        grid.addWidget(lbl)
+        grid.addWidget(btn)
+        self.greeting_widget.setLayout(grid)
 
     def mainWidget(self):
 
@@ -84,53 +70,79 @@ class MyApplication(QMainWindow):
         self.equation_lbl = QLabel('Equation type', self)
         equations = ['A*x1 + B*x2 = y', 'A*x1^2 + B*x2^2', 'A*x1^2 + B*x2']
         self.equation = QComboBox(self)
+        self.equation.setMaximumWidth(300)
         for eq in equations:
             self.equation.addItem(eq)
 
         self.coef_lbl = QLabel('Coefficients')
         self.coeffs = QLineEdit()
-        self.coeffs.setPlaceholderText('Example: A=1;B=-1')
+        style = self.stylify('input')
+        self.coeffs.setStyleSheet(style)
+        self.coeffs.setPlaceholderText('Example: A=1;B=-1;')
+        self.coeffs.setMaximumWidth(300)
 
 
-        self.answerBtn = QPushButton('Get Answer')
-        self.answerBtn.clicked.connect(self.sendToServer)
-        self.answerBtn.setMaximumWidth(400)
+        answerBtn = QPushButton('Get Answer')
+        style = self.stylify('btn--small')
+        answerBtn.setStyleSheet(style)
+        answerBtn.setCursor(Qt.OpenHandCursor)
+        answerBtn.setMaximumWidth(300)
+        answerBtn.clicked.connect(self.sendToServer)
 
-        btn2 = QPushButton('Go tto greeting')
-        style = "color: #4d4d4f; border: 1px solid #4d4d4f; padding: 10px; border-radius: 5px; font-size: 20px; outline: none; background: none;"
-        btn2.setStyleSheet(style)
-        btn2.setCursor(Qt.OpenHandCursor)
-
-        btn2.clicked.connect(self.change)
+        greetBtn = QPushButton('Go to start page')
+        style = self.stylify('btn--large')
+        greetBtn.setStyleSheet(style)
+        greetBtn.setCursor(Qt.OpenHandCursor)
+        greetBtn.clicked.connect(self.change)
 
         self.resultLabel = QLabel(self)
-        self.resultLabel.setText("Here Will Be Your Answer")
+        self.resultLabel.setText("Here Will Be An Answer")
+        self.resultLabel.setMinimumWidth(165)
 
-        grid2 = QGridLayout()
-        grid2.addWidget(self.equation_lbl, 0, 0)
-        grid2.addWidget(self.equation, 0, 1)
-        grid2.addWidget(self.coef_lbl, 2, 1)
-        grid2.addWidget(self.coeffs, 2, 2)
-        grid2.addWidget(self.answerBtn, 3, 3)
-        grid2.addWidget(self.resultLabel, 3, 2)
-        grid2.addWidget(btn2, 0, 4)
-        self.main_widget.setLayout(grid2)
+        grid = QGridLayout()
+        grid.addWidget(self.equation_lbl, 0, 0)
+        grid.addWidget(self.equation, 0, 1)
+        grid.addWidget(self.coef_lbl, 1, 0)
+        grid.addWidget(self.coeffs, 1, 1)
+        grid.addWidget(answerBtn, 2, 1)
+        grid.addWidget(self.resultLabel, 2, 0)
+        grid.addWidget(greetBtn, 3, 0, 1, 2)
+        self.main_widget.setLayout(grid)
 
+    def initUI(self):
+        self.setGeometry(400, 50, 500, 400)
+        self.setWindowTitle('MathSelf')
+        self.show()
 
-    def initStyle(self):
-        # self.main_widget.setStyleSheet("background-image: url(./static/img/background.jpg)")
-        a = 1
+    # STYLES
+    def stylify(self, target):
+        if target == 'btn--large':
+            return "color: #4d4d4f; border: 1px solid #4d4d4f; padding: 10px; border-radius: 5px; font-size: 20px; outline: none; background: none;"
+        elif target == 'btn--small':
+            return "color: #4d4d4f; border: 1px solid #4d4d4f; padding: 4px; border-radius: 5px; font-size: 14px; outline: none; background: none;"
+        elif target == 'input':
+            return "color: #4d4d4f; border: 1px solid #4d4d4f; padding: 4px; border-radius: 5px; font-size: 14px; outline: none; background: none;"
 
+    # EVENTS HANDLER
     def change(self):
 
         if self.lay.currentIndex() == 0:
             self.lay.setCurrentWidget(self.main_widget)
         elif self.lay.currentIndex() == 1:
-            self.lay.setCurrentWidget(self.gw)
+            self.lay.setCurrentWidget(self.greeting_widget)
 
             self.resultLabel.setText("Here Will Be Your Answer")
             self.equation.setCurrentIndex(0)
             self.coeffs.setText("")
+
+    # COMMUNICATES WITH SERVER
+    def initSocketConnection(self):
+        self.clientSocket = socket.socket()
+        self.clientSocket.connect(('localhost', 9090))
+        self.serverpack = {
+            "equation": 0,
+            "coeffs": []
+        }
 
     def sendToServer(self):
 
@@ -157,9 +169,12 @@ class MyApplication(QMainWindow):
         result = json.loads(serialized_result.decode())
         self.setResultLabel(result)
 
+    # DEAL WITH INFORMATION FOR/FROM SERVER
     def parse(self):
+
         self.parsed_coeffs = []
 
+        # determine which regex we need to use for a particular equation
         curent_eq = self.equation.currentIndex()
         if curent_eq == 0:
             reg_ex = r'A=\d+;\s*B=\d+;'
@@ -172,6 +187,7 @@ class MyApplication(QMainWindow):
         else:
             print('SOME PARSE ERROR')
 
+        # check regex
         success_reg = re.findall(reg_ex, self.coeffs.text())
         if success_reg:
             for coef in re.findall(r'\d+', self.coeffs.text()):
@@ -185,3 +201,6 @@ class MyApplication(QMainWindow):
 
     def setResultLabel(self, result):
         self.resultLabel.setText("%s" % result )
+
+    def setNoResultLabel(self):
+        self.resultLabel.setText("No Result For This Coefficients")

@@ -3,45 +3,73 @@ import socket
 import json
 import redis
 
-from signal import signal, SIGPIPE, SIG_DFL
-signal(SIGPIPE,SIG_DFL)
+from cache import RedisCache
 
 
-class RedisCahe():
+class MathServer:
 
-    def __init__(self):
-        self.r = redis.StrictRedis(host='localhost', port=6379, db=0)
+    def __init__(self, host='localhost', port=9090, recv=4096):
+        self.tcpSocket = socket.socket()
+        self.tcpSocket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+
+        self.cache = RedisCache()
+        self.host = host
+        self.port = port
+        self.recv = recv
+
+    def runserver(self):
+        try:
+            self.tcpSocket.bind((self.host, self.port))
+            self.tcpSocket.listen(10)
+            print('Server has started on {}:{}'.format(self.host, self.port))
+        except Exception as e:
+            raise
+
+        self.serverloop()
+
+    def serverloop(self):
+
+        while True:
+            connection, address = self.tcpSocket.accept()
+
+            serialized_data = connection.recv(self.recv)
+
+            cached_value = self.cache.get(serialized_data)
+            if cached_value is not None:
+                connection.send(cached_value)
+                connection.close()
+
+                print("Cache has been used")
+                if self.cache.dbsize() > 10:
+                    self.cache.flushall()
+                continue
+
+            data = json.loads(serialized_data.decode())
+
+            coeffs = data["coeffs"]
+            equation = data["equation"]
+
+            # CALCULATION BEGIN
+            result = self.calculate(coeffs)
+            serialized_result = json.dumps(result)
+            for i in range(0, 100000000):
+                continue
+            #CALCULATION END
+
+            serialized_result = json.dumps(result)
+            self.cache.append(serialized_data.decode(), serialized_result)
+
+            connection.send(serialized_result.encode())
+            connection.close()
+
+    def calculate(self, coeffs):
+        result = 0
+        for c in coeffs:
+            result += c
+        return result
 
 
-tcpSocket = socket.socket()
-tcpSocket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+if __name__ == '__main__':
 
-cache = redis.StrictRedis(host='localhost', port=6379, db=0)
-cache.append(str(1), {'1':8})
-print(cache.get("1"))
-
-try:
-    tcpSocket.bind(('localhost', 9095))
-    print('Server has started')
-except Exception as e:
-    raise
-
-tcpSocket.listen(10)
-
-while True:
-    connection, address = tcpSocket.accept()
-
-    serialized_data = connection.recv(4048)
-    print(serialized_data)
-
-    data = json.loads(serialized_data.decode())
-
-    coeffs = data["coeffs"]
-    result = 0
-    for c in coeffs:
-        result += c
-
-    a = json.dumps(result)
-    print(a)
-    connection.send(a.encode())
-    connection.close()
+    server = MathServer(host='localhost', port=9090, recv=4096)
+    server.runserver()
