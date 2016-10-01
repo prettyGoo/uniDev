@@ -4,11 +4,11 @@
 #include <algorithm>
 #include <iostream>
 
-#define N 5
+#define N 4
 
 
-// int C[N][N] = {0,4,3,2,4,0,1,2,3,1,0,4,2,2,4,0};
-//int C[N][N] = {0,2,16,3,2,0,50,3,16,50,0,4,3,3,4,0};
+int C[N][N] = {0,4,3,2,4,0,1,2,3,1,0,4,2,2,4,0};
+int C[N][N] = {0,2,16,3,2,0,50,3,16,50,0,4,3,3,4,0};
 int C[5][5] = {0,7,2,1,1,7,0,2,4,8,2,2,0,1,3,1,4,1,0,6,1,8,3,6,0};
 
 void* calcLocalSum(void* road_num) {
@@ -16,7 +16,7 @@ void* calcLocalSum(void* road_num) {
   int rnum = *(int*)road_num; //stores current road n;
   int link[N-2]; // -2 for start point and for current point, stores city order
 
-  std::cout << "Thread " << rnum << "\n";
+  std::cout << "\nThread " << rnum << "\n";
 
   //init possible link
   int j=0;
@@ -25,7 +25,12 @@ void* calcLocalSum(void* road_num) {
       link[j] = i;
       j++;
     }
-  } // [2, 3, 4] for road 1
+  }
+
+  //init best road container
+  int road_map[N];
+  road_map[0] = 0; road_map[1] = rnum;
+
 
   int sum;
   int *best_sum = new int;
@@ -38,23 +43,26 @@ void* calcLocalSum(void* road_num) {
     }
     if (sum < *best_sum || *best_sum == 0) {
       *best_sum = sum;
+      for (int i=2; i<N; i++) {
+        road_map[i] = link[i-2];
+      }
     }
   } while ( std::next_permutation(link, link+N-2) );
 
 
-  std::cout << "Best local sum " << *best_sum << "\n";
+  std::cout << "Best road map: ";
+  for (int i; i<N; i++) {
+    std:: cout << road_map[i] << " ";
+  }
+  std::cout << "\nBest local sum " << *best_sum << "\n";
+
   return (void*)best_sum;
 }
 
 
 int main() {
 
-  int n;
-  printf("Input the number of cities\n");
-  scanf("%d", &n);
-
-  // fill cost matrix
-  int cost_matrix[N][N];
+  printf("Building road\n");
 
   int tnums = N -1;
   pthread_t threads[tnums]; int number[N] ;
@@ -74,7 +82,7 @@ int main() {
       final_cost = *local_cost;
   }
 
-  printf("The least expensive building cost is %d\n", final_cost);
+  printf("\nThe least expensive building cost is %d\n", final_cost);
 
   return 0;
 }
