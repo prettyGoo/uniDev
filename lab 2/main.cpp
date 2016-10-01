@@ -1,85 +1,80 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <pthread.h>
+#include <algorithm>
 #include <iostream>
-
 
 #define N 5
 
 
+// int C[N][N] = {0,4,3,2,4,0,1,2,3,1,0,4,2,2,4,0};
+//int C[N][N] = {0,2,16,3,2,0,50,3,16,50,0,4,3,3,4,0};
+int C[5][5] = {0,7,2,1,1,7,0,2,4,8,2,2,0,1,3,1,4,1,0,6,1,8,3,6,0};
+
+void* calcLocalSum(void* road_num) {
+
+  int rnum = *(int*)road_num; //stores current road n;
+  int link[N-2]; // -2 for start point and for current point, stores city order
+
+  std::cout << "Thread " << rnum << "\n";
+
+  //init possible link
+  int j=0;
+  for (int i=1; i<=N; i++) {
+    if (i != rnum) {
+      link[j] = i;
+      j++;
+    }
+  } // [2, 3, 4] for road 1
+
+  int sum;
+  int *best_sum = new int;
+  *best_sum = 0;
+
+  do {
+    sum = C[0][rnum] + C[rnum][link[0]];
+    for (int i=0; i<N-3; i++) {
+      sum += C[link[i]][link[i+1]];
+    }
+    if (sum < *best_sum || *best_sum == 0) {
+      *best_sum = sum;
+    }
+  } while ( std::next_permutation(link, link+N-2) );
+
+
+  std::cout << "Best local sum " << *best_sum << "\n";
+  return (void*)best_sum;
+}
+
+
 int main() {
 
-  // int price_matrix[N][N] = {{0, 1, 11, 7}, {1, 0, 6, 4}, {11, 6, 0, 2}, {7, 4, 2, 0}};
-  // int road_matrix[N][N] = {{0, 0, 0, 0}, {0, 0, 0, 0}, {0, 0, 0, 0}, {0, 0, 0, 0}};
+  int n;
+  printf("Input the number of cities\n");
+  scanf("%d", &n);
 
-  int price_matrix[N][N] = {{0, 10, 5, 4, 1}, {10, 0, 11, 8, 3}, {5, 11, 0, 7, 1}, {4, 8, 7, 0, 6}, {1, 3, 1, 6, 0}};
-  int road_matrix[N][N] = {{0, 0, 0, 0, 0}, {0, 0, 0, 0, 0}, {0, 0, 0, 0, 0}, {0, 0, 0, 0, 0}, {0, 0, 0, 0, 0}};
+  // fill cost matrix
+  int cost_matrix[N][N];
 
-  int best_sum = 0;
-  int sum = 0;
-  int tmp_sum1;
-  int tmp_sum2;
-  int tmp_sum3;
+  int tnums = N -1;
+  pthread_t threads[tnums]; int number[N] ;
 
-  int start_city, last_city, current_city, prev_city;
-
-  start_city = 0;
-  last_city = N-1;
-
-  // FIND INITIAL BEST SUM
-  for (int city = start_city + 1; city <= last_city; city++) {
-    best_sum += price_matrix[start_city][city];
-    road_matrix[start_city][city] = 1;
+  for (int i = 0; i < tnums; i++) {
+    number[i] = i + 1;
+    pthread_create(&threads[i], NULL, calcLocalSum, (void *)(number+i)) ;
   }
 
-  // SHOW CURRENT ROAD MAP IN A MATRIX FORM
-  for (int i=0; i<N; i++) {
-    for (int j=0; j<N; j++) {
-      std::cout << price_matrix[i][j] << " ";
-    }
-    std::cout<<"\n";
+  int* local_cost;
+  int final_cost = 0;
+  for (int i = 0; i < tnums; i++) {
+
+    pthread_join(threads[i], (void **)&local_cost);
+
+    if (*local_cost < final_cost || final_cost == 0)
+      final_cost = *local_cost;
   }
-  std::cout << "Best sum: " << best_sum << "\n";
 
-  // START FINDING BETTER ROADS
-  current_city = start_city + 1;
-  prev_city = start_city;
-
-  while (current_city != last_city) {
-    std::cout << "\n\nCurrent city :" << current_city + 1 << "\n";
-    for (int city = current_city + 1; city <= last_city; city++) {
-
-      tmp_sum1 = price_matrix[current_city][city]; //1
-      tmp_sum2 = price_matrix[prev_city][city]; //5
-      tmp_sum3 = price_matrix[prev_city][current_city]; //11
-      std::cout << tmp_sum1 << " " << tmp_sum2 << " " << tmp_sum3 << "\n";
-
-      if (tmp_sum1 < tmp_sum2) {
-        road_matrix[current_city][city] = 1;
-        road_matrix[prev_city][city] = 0;
-        std::cout << "Build road1: " << current_city+ 1 << city + 1<< "destroy road: " << prev_city + 1<< city + 1<<"\n";
-        best_sum = best_sum + tmp_sum1 - tmp_sum2;
-      }
-      for (int visited_city=0; visited_city<current_city; visited_city++) {
-
-        if (price_matrix[visited_city][current_city] > price_matrix[visited_city][city] + price_matrix[city][current_city] && road_matrix[visited_city][city] != 0) {
-          road_matrix[current_city][city] = 1;
-          road_matrix[visited_city][current_city] = 0;
-          best_sum = best_sum + price_matrix[current_city][city] - price_matrix[visited_city][current_city];
-          std::cout << "Build road2: " << current_city + 1<< city + 1 << "destroy road: " << visited_city + 1<< current_city+ 1 <<"\n";
-        }
-      }
-    }
-    for (int i=0; i<N; i++) {
-      for (int j=0; j<N; j++) {
-        std::cout << road_matrix[i][j] << " ";
-      }
-      std::cout<<"\n";
-    }
-    std::cout << "Best sum: " << best_sum << "\n";
-    prev_city = current_city;
-    current_city += 1;
-  }
+  printf("The least expensive building cost is %d\n", final_cost);
 
   return 0;
 }
