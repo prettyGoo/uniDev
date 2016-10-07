@@ -2,6 +2,7 @@ import sys
 import socket
 import json
 import redis
+import numpy as np
 
 from cache import RedisCache
 
@@ -13,6 +14,7 @@ class MathServer:
         self.tcpSocket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
 
         self.cache = RedisCache()
+        self.cache.flushall()
         self.host = host
         self.port = port
         self.recv = recv
@@ -50,23 +52,39 @@ class MathServer:
             equation = data["equation"]
 
             # CALCULATION BEGIN
-            result = self.calculate(coeffs)
+            result = self.calculate(equation, coeffs)
             serialized_result = json.dumps(result)
-            for i in range(0, 100000000):
-                continue
             #CALCULATION END
 
-            serialized_result = json.dumps(result)
             self.cache.append(serialized_data.decode(), serialized_result)
 
             connection.send(serialized_result.encode())
             connection.close()
 
-    def calculate(self, coeffs):
-        result = 0
-        for c in coeffs:
-            result += c
-        return result
+    def calculate(self, eq, coeffs):
+
+        if eq == 0: # Ax+B=0
+            return - coeffs[1] / coeffs[0]
+        elif eq == 1: # Ax^2+Bx+C=0
+            print(coeffs)
+            d = coeffs[1]**2 - 4*coeffs[0]*coeffs[2]
+            x1 = (-coeffs[1] + d**0.5)/(2*coeffs[0])
+            x2 = (-coeffs[1] - d**0.5)/(2*coeffs[0])
+            return [x1, x2]
+        elif eq == 2: # Ax+By+C=0; Cx+Dy+E=0
+            a = np.array([[coeffs[0], coeffs[1]], [coeffs[2], coeffs[3]]])
+            b = np.array([-coeffs[2], -coeffs[4]])
+
+            res = np.linalg.solve(a, b)
+            return [res[0], res[1]]
+
+        elif eq == 3:
+            a = np.array([[coeffs[0], coeffs[1]], [coeffs[2], coeffs[3]]])
+            b = np.array([-coeffs[2], -coeffs[4]])
+
+            res = np.linalg.solve(a, b)
+            return [res[0], -res[1]/coeffs[0],-res[0]*coeffs[0], res[1]]
+
 
 
 if __name__ == '__main__':

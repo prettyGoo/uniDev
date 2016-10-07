@@ -68,7 +68,7 @@ class MyApplication(QMainWindow):
         self.main_widget = QWidget()
 
         self.equation_lbl = QLabel('Equation type', self)
-        equations = ['A*x1 + B*x2 = y', 'A*x1^2 + B*x2^2', 'A*x1^2 + B*x2']
+        equations = ['Ax + B = 0', 'Ax^2 + Bx + C = 0', 'Ax + By + C = 0; Cx + Dy + E = 0', 'Ax^2 + By^2 + C = 0; Cx^2 + Dy^2 + E = 0']
         self.equation = QComboBox(self)
         self.equation.setMaximumWidth(300)
         for eq in equations:
@@ -158,9 +158,7 @@ class MyApplication(QMainWindow):
 
         data = json.dumps(self.serverpack)
         self.clientSocket.send(data.encode())
-        print('DATA HAS BEEN SENT TO THE SERVER')
         self.receiveData()
-        print('DATA HAS BEEN RECEIVED FROM THE SERVER')
 
     def receiveData(self):
         serialized_result  = self.clientSocket.recv(4048)
@@ -175,15 +173,19 @@ class MyApplication(QMainWindow):
         self.parsed_coeffs = []
 
         # determine which regex we need to use for a particular equation
-        curent_eq = self.equation.currentIndex()
-        if curent_eq == 0:
+        current_eq = self.equation.currentIndex()
+        if current_eq == 0:
             reg_ex = r'A=\d+;\s*B=\d+;'
-            self.serverpack["equation"] = 0
-            print('reg 1')
-        elif curent_eq == 1:
+            self.serverpack["equation"] = current_eq
+        elif current_eq == 1:
             reg_ex = r'A=\d+;\s*B=\d+;\s*C=\d+;\s*'
-            self.serverpack["equation"] = 1
-            print('reg 2')
+            self.serverpack["equation"] = current_eq
+        elif current_eq == 2:
+            reg_ex = r'A=\d+;\s*B=\d+;\s*C=\d+;\s*D=\d+;\s*E=\d+;\s*'
+            self.serverpack["equation"] = current_eq
+        elif current_eq == 3:
+            reg_ex = r'A=\d+;\s*B=\d+;\s*C=-\d+;\s*D=\d+;\s*E=-\d+;\s*'
+            self.serverpack["equation"] = current_eq
         else:
             print('SOME PARSE ERROR')
 
