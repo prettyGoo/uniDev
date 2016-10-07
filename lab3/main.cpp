@@ -16,17 +16,23 @@ pthread_mutex_t mutex;
 int costs_matrix[N-1];
 int cost_i = 0;
 
+struct City
+{
+  int n;
+};
+
 void* calcLocalSum(void* road_num) {
 
-  int rnum = *(int*)road_num; //stores current road n;
+  City *rnum = (City *)road_num ;
+  //int rnum = *(int*)road_num; //stores current road n;
   int link[N-2]; // -2 for start point and for current point, stores city order
 
-  std::cout << "\nThread " << rnum << "\n";
+  std::cout << "\nThread " << rnum->n << "\n";
 
   //init possible link
   int j=0;
   for (int i=1; i<=N; i++) {
-    if (i != rnum) {
+    if (i != rnum->n) {
       link[j] = i;
       j++;
     }
@@ -34,7 +40,7 @@ void* calcLocalSum(void* road_num) {
 
   //init best road container
   int road_map[N];
-  road_map[0] = 0; road_map[1] = rnum;
+  road_map[0] = 0; road_map[1] = rnum->n;
 
 
   int sum;
@@ -42,7 +48,7 @@ void* calcLocalSum(void* road_num) {
   *best_sum = 0;
 
   do {
-    sum = C[0][rnum] + C[rnum][link[0]];
+    sum = C[0][rnum->n] + C[rnum->n][link[0]];
     for (int i=0; i<N-3; i++) {
       sum += C[link[i]][link[i+1]];
     }
@@ -78,10 +84,11 @@ int main() {
 
   int tnums = N -1;
 
-  pthread_t threads[tnums]; int number[N] ;
+  pthread_t threads[tnums];
+  City number[N] ;
   for (int i = 0; i < tnums; i++) {
-    number[i] = i + 1;
-    pthread_create(&threads[i], NULL, calcLocalSum, (void *)(number+i)) ;
+    number[i].n = i + 1;
+    pthread_create(&threads[i], NULL, calcLocalSum, (void *)&number[i]) ;
   }
 
   for (int i = 0; i < tnums; i++) {
