@@ -165,7 +165,11 @@ class MyApplication(QMainWindow):
         self.clientSocket.close()
 
         result = json.loads(serialized_result.decode())
-        self.setResultLabel(result)
+        print(result)
+        if result != 'noresult':
+            self.setResultLabel(result)
+        else:
+            self.setNoResultLabel()
 
     # DEAL WITH INFORMATION FOR/FROM SERVER
     def parse(self):
@@ -175,25 +179,26 @@ class MyApplication(QMainWindow):
         # determine which regex we need to use for a particular equation
         current_eq = self.equation.currentIndex()
         if current_eq == 0:
-            reg_ex = r'A=\d+;\s*B=\d+;'
+            reg_ex = r'A=.?\d+;\s*B=.?\d+;'
             self.serverpack["equation"] = current_eq
         elif current_eq == 1:
-            reg_ex = r'A=\d+;\s*B=\d+;\s*C=\d+;\s*'
+            reg_ex = r'A=.?\d+;\s*B=.?\d+;\s*C=.?\d+;\s*'
             self.serverpack["equation"] = current_eq
         elif current_eq == 2:
-            reg_ex = r'A=\d+;\s*B=\d+;\s*C=\d+;\s*D=\d+;\s*E=\d+;\s*'
+            reg_ex = r'A=.?\d+;\s*B=.?\d+;\s*C=.?\d+;\s*D=.?\d+;\s*E=.?\d+;\s*'
             self.serverpack["equation"] = current_eq
         elif current_eq == 3:
-            reg_ex = r'A=\d+;\s*B=\d+;\s*C=-\d+;\s*D=\d+;\s*E=-\d+;\s*'
+            reg_ex = r'A=.?\d+;\s*B=.?\d+;\s*C=.?\d+;\s*D=.?\d+;\s*E=.?\d+;\s*'
             self.serverpack["equation"] = current_eq
-        else:
-            print('SOME PARSE ERROR')
 
         # check regex
         success_reg = re.findall(reg_ex, self.coeffs.text())
         if success_reg:
-            for coef in re.findall(r'\d+', self.coeffs.text()):
-                self.parsed_coeffs.append(int(coef))
+            for coef in re.findall(r'.?\d+', self.coeffs.text()):
+                if coef[0] == '-':
+                    self.parsed_coeffs.append(int(coef))
+                else:
+                    self.parsed_coeffs.append(int(coef[1:len(coef)]))
             return True
         else:
             return False
@@ -205,4 +210,4 @@ class MyApplication(QMainWindow):
         self.resultLabel.setText("%s" % result )
 
     def setNoResultLabel(self):
-        self.resultLabel.setText("No Result For This Coefficients")
+        self.resultLabel.setText("No Real Result For This Coefficients")

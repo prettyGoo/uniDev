@@ -53,6 +53,12 @@ class MathServer:
 
             # CALCULATION BEGIN
             result = self.calculate(equation, coeffs)
+            if type(result) is list:
+                for r in result:
+                    if type(r) is complex:
+                        result = 'noresult'
+                        break
+                        
             serialized_result = json.dumps(result)
             #CALCULATION END
 
@@ -63,15 +69,17 @@ class MathServer:
 
     def calculate(self, eq, coeffs):
 
-        if eq == 0: # Ax+B=0
+        if eq == 0:
             return - coeffs[1] / coeffs[0]
-        elif eq == 1: # Ax^2+Bx+C=0
+
+        elif eq == 1:
             print(coeffs)
             d = coeffs[1]**2 - 4*coeffs[0]*coeffs[2]
             x1 = (-coeffs[1] + d**0.5)/(2*coeffs[0])
             x2 = (-coeffs[1] - d**0.5)/(2*coeffs[0])
             return [x1, x2]
-        elif eq == 2: # Ax+By+C=0; Cx+Dy+E=0
+
+        elif eq == 2:
             a = np.array([[coeffs[0], coeffs[1]], [coeffs[2], coeffs[3]]])
             b = np.array([-coeffs[2], -coeffs[4]])
 
