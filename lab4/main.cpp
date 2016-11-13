@@ -3,14 +3,18 @@
 #include <pthread.h>
 #include <algorithm>
 #include <iostream>
+#include <semaphore.h>
 
-#define N 4
 
+#define N 5
 
 //int C[N][N] = {0,4,3,2,4,0,1,2,3,1,0,4,2,2,4,0};
 //int C[N][N] = {0,2,16,3,2,0,50,3,16,50,0,4,3,3,4,0};
-int C[N][N] = {0,1,7,6,1,0,4,3,7,4,0,1,6,3,1,0};
-//int C[N][N] = {0,7,2,1,1,7,0,2,4,8,2,2,0,1,3,1,4,1,0,6,1,8,3,6,0};
+//int C[N][N] = {0,1,7,6,1,0,4,3,7,4,0,1,6,3,1,0};
+int C[N][N] = {0,7,2,1,1,7,0,2,4,8,2,2,0,1,3,1,4,1,0,6,1,8,3,6,0};
+
+sem_t sum_sem;
+sem_t tnum_max_sem;
 
 int costs_matrix[N-1];
 int cost_i = 0;
@@ -20,6 +24,8 @@ struct City
 };
 
 void* calcLocalSum(void* road_num) {
+
+  sem_wait(&tnum_max_sem);
 
   City *rnum = (City *)road_num ;
   //int rnum = *(int*)road_num; //stores current road n;
@@ -65,22 +71,34 @@ void* calcLocalSum(void* road_num) {
   }
   std::cout << "\nBest local sum " << *best_sum << "\n";
 
-  pthread_mutex_lock(&mutex) ;
+  sem_wait(&sum_sem) ;
   costs_matrix[cost_i] = *best_sum;
   cost_i++;
-  pthread_mutex_unlock(&mutex) ;
+  sem_post(&sum_sem) ;
+
+  for (int i=0; i<100000000; i++) {
+    continue;
+  }
+
+  sem_post(&tnum_max_sem);
 }
 
 
 int main() {
 
   int K;
-  printf("Input K, where K is max threads number: ")
+  printf("Input K, where K is max threads number: ");
   scanf("%d", &K);
 
   printf("Building road\n");
 
-  int tnums = N -1;
+  int tnums = N - 1;
+  if (K > tnums) {
+    K = 0;
+  }
+
+  sem_init(&sum_sem, 0, 1); //create semaphore which can be used by one process only, default value 1
+  sem_init(&tnum_max_sem, 0, K);
 
   pthread_t threads[tnums];
   City number[N] ;
@@ -101,6 +119,7 @@ int main() {
   }
   printf("\nThe least expensive building cost is %d\n", final_cost);
 
-  pthread_mutex_destroy (&mutex);
+  sem_wait(&sum_sem);
+  sem_destroy(&sum_sem);
   return 0;
 }
