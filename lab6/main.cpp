@@ -11,7 +11,6 @@ FILE *fp;
 pthread_mutex_t mutex;
 
 pthread_cond_t free_file;
-pthread_cond_t taken_file;
 
 
 void *Writer(void *param)
@@ -23,16 +22,19 @@ void *Writer(void *param)
     for (int i=0; i < 10; i++)
       data += i;
 
-      std::cout << "Writer is writing\n";
       pthread_mutex_lock(&mutex);
+      std::cout << "Writer is writing\n";
       fp = fopen("database.txt", "w");
       fprintf(fp, "%d\n", data);
       fclose(fp);
-      pthread_mutex_unlock(&mutex);
+      for (int j=0; j<1000000; j++) continue;
       std::cout << "Writer has finished writing\n";
+      pthread_mutex_unlock(&mutex);
+
 
       pthread_cond_broadcast(&free_file);
-      for (int j=0; j<100000000; j++) {
+      for (int j=0; j<100000; j++) {
+       pthread_cond_broadcast(&free_file);
        continue;
       }
     }
@@ -42,6 +44,7 @@ void *Writer(void *param)
 void *Reader(void *param)
 {
   char data[255];
+  int a;
   while (1)
   {
     pthread_cond_wait(&free_file, &mutex);
